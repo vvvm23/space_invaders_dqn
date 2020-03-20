@@ -1,5 +1,6 @@
 import random
 from collections import deque
+import argparse
 
 import cv2
 import numpy as np
@@ -89,7 +90,7 @@ def short_to_state(short):
 if __name__ == '__main__':
     NB_SHORT_MEM = 4
     NB_GAMES = 1000
-    NB_STEPS = 500
+    MAX_STEP = 10000
 
     env = gym.make('SpaceInvaders-v0')
     # state_size = env.observation_space.shape[0:2]
@@ -97,12 +98,18 @@ if __name__ == '__main__':
     action_size = env.action_space.n
     agent = DQN(state_size, action_size, NB_SHORT_MEM)
 
+    parser = argparse.ArgumentParser(description="DQN SpaceInvaders Training")
+    parser.add_argument("--resume", help="Resume training using the weights stored in this file.", default=None)
+    args = parser.parse_args()
+    if not args.resume == None:
+        agent.load(args.resume)
+
     for g in range(NB_GAMES):
         obv = preprocess(env.reset())
         short_mem = deque([obv]*NB_SHORT_MEM, maxlen=NB_SHORT_MEM)
         state = short_to_state(short_mem)
 
-        for t in range(NB_STEPS):
+        for t in range(MAX_STEP):
             if t % 10 == 0:
                 print(f"Game {g}: Time - {t}")
             action = agent.act(state)
