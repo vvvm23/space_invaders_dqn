@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import gym
+from gym.wrappers.monitoring.video_recorder import VideoRecorder 
+
 import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten
@@ -116,6 +118,8 @@ if __name__ == '__main__':
         agent.load(args.weights)
 
     if args.mode == "play":
+        vid = VideoRecorder(env, path='./play.mp4')
+
         obv = preprocess(env.reset())
         short_mem = deque([obv]*NB_SHORT_MEM, maxlen=NB_SHORT_MEM)
         state = short_to_state(short_mem)
@@ -124,11 +128,12 @@ if __name__ == '__main__':
             action = agent.act(state)
             obv, reward, done, _ = env.step(action)
             env.render()
-            time.sleep(1/60)
+            vid.capture_frame()
             obv = preprocess(obv)
             short_mem.append(obv)
             state = short_to_state(short_mem)
         env.close()
+        vid.close()
         exit()
 
 
