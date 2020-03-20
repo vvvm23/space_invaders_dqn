@@ -1,6 +1,7 @@
 import random
 from collections import deque
 import argparse
+import time
 
 import cv2
 import numpy as np
@@ -99,10 +100,37 @@ if __name__ == '__main__':
     agent = DQN(state_size, action_size, NB_SHORT_MEM)
 
     parser = argparse.ArgumentParser(description="DQN SpaceInvaders Training")
-    parser.add_argument("--resume", help="Resume training using the weights stored in this file.", default=None)
+    parser.add_argument("--weights", help="Use weights stored in this file", default=None)
+    parser.add_argument("--mode", help="Train or play mode.", default="train")
     args = parser.parse_args()
-    if not args.resume == None:
-        agent.load(args.resume)
+    
+    if args.mode not in ["train", "play"]:
+        print("Unknown mode")
+        exit()
+
+    if args.mode == "play" and args.weights == None:
+        print("Weights must be specified")
+        exit()
+
+    if not args.weights == None:
+        agent.load(args.weights)
+
+    if args.mode == "play":
+        obv = preprocess(env.reset())
+        short_mem = deque([obv]*NB_SHORT_MEM, maxlen=NB_SHORT_MEM)
+        state = short_to_state(short_mem)
+        done = False
+        while not done:
+            action = agent.act(state)
+            obv, reward, done, _ = env.step(action)
+            env.render()
+            time.sleep(1/60)
+            obv = preprocess(obv)
+            short_mem.append(obv)
+            state = short_to_state(short_mem)
+        env.close()
+        exit()
+
 
     for g in range(NB_GAMES):
         obv = preprocess(env.reset())
@@ -111,7 +139,7 @@ if __name__ == '__main__':
 
         for t in range(MAX_STEP):
             if t % 10 == 0:
-                print(f"Game {g}: Time - {t}")
+                print(f"Game {g+1}: Time - {t}")
             action = agent.act(state)
             obv, reward, done, _ = env.step(action)
             obv = preprocess(obv)
@@ -122,7 +150,7 @@ if __name__ == '__main__':
             agent.add_memory(state, action, reward, next_state, done)
             state = next_state
             if done:
-                print(f"Game {g}: Time - {t}\tReward: {reward}")
+                print(f"Game {g+1}: Time - {t}\tReward: {reward}")
                 break
             # TODO: record memory size <19-03-20, alex> #
             if len(agent.memory) > agent.batch_size:
@@ -133,7 +161,7 @@ if __name__ == '__main__':
             plt.title("SpaceInvaders DQN Loss")
             plt.ylabel("Loss")
             plt.xlabel("Game")
-            plt.savefig(f"./space-invaders-loss-graph-{g}.png")
-            agent.save(f"./space-invaders-dqn-{g}.h5")
+            plt.savefig(f"./space-invaders-loss-graph-{g+1}.png")
+            agent.save(f"./space-invaders-dqn-{g+1}.h5")
     
     agent.save(f"./space-invaders-dqn-final.h5")
